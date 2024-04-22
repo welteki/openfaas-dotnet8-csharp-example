@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -30,43 +28,4 @@ public static class Handler
             optionsBuilder => optionsBuilder.UseNpgsql(connectionString)
         );
     }
-}
-
-[Table("employee")]
-public class Employee
-{
-    [System.ComponentModel.DataAnnotations.Key]
-    [Column("id")]
-    public int Id { get; set; }
-
-    [Column("name")] 
-    public string? Name { get; set; }
-
-    [Column("email")] 
-    public string? Email { get; set; }
-
-
-}
-
-public class EmployeeDb: DbContext
-{
-    public EmployeeDb(DbContextOptions<EmployeeDb> options)
-        : base(options) { }
-
-    public DbSet<Employee> Employees { get; set; }
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<Employee>(e => e.ToTable("employee"));
-        modelBuilder.Entity<Employee>(entity =>
-        {
-            entity.Property(e => e.Id)
-                .HasColumnName("id")
-                .HasDefaultValueSql("nextval('account.item_id_seq'::regclass)");
-            entity.Property(e => e.Name).IsRequired().HasColumnName("name");
-            entity.Property(e => e.Email).IsRequired().HasColumnName("email");
-        });
-
-        base.OnModelCreating(modelBuilder);
-    }   
 }
