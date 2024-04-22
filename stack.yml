@@ -1,0 +1,11 @@
+version: 1.0
+provider:
+  name: openfaas
+  gateway: http://127.0.0.1:8080
+functions:
+  devices:
+    lang: dotnet8-csharp
+    handler: ./employee-api
+    image: ttl.sh/welteki/dotnet-employees:latest
+    secrets:
+      - pg-connection
