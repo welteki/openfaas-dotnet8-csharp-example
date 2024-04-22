@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
@@ -14,34 +16,57 @@ public static class Handler
         var connectionString = File.ReadAllText("/var/openfaas/secrets/pg-connection");
         var dataSource = NpgsqlDataSource.Create(connectionString);
 
-        app.MapGet("/", async () =>
-        {   
-            var employees = new List<Employee>();
-            await using (var cmd = dataSource.CreateCommand("SELECT id, name, email FROM employee"))
-            await using (var reader = await cmd.ExecuteReaderAsync())
-            {
-                while (await reader.ReadAsync())
-                {
-                    employees.Add(new Employee{
-                        Id = (int)reader["id"],
-                        Name = reader.GetString(1),
-                        Email = reader.GetString(2)
-                    });
-                }
-            }
-            return Results.Ok(employees);
-        });
+       app.MapGet("/", async (EmployeeDb db) =>
+            await db.Employees.ToListAsync());
     }
 
     // MapServices can be used to configure additional
     // WebApplication services
     public static void MapServices(IServiceCollection services)
     {
+        var connectionString = File.ReadAllText("/var/openfaas/secrets/pg-connection");
+
+        services.AddDbContext<EmployeeDb>(
+            optionsBuilder => optionsBuilder.UseNpgsql(connectionString)
+        );
     }
 }
 
-public class Employee {
+[Table("employee")]
+public class Employee
+{
+    [System.ComponentModel.DataAnnotations.Key]
+    [Column("id")]
     public int Id { get; set; }
+
+    [Column("name")] 
     public string? Name { get; set; }
+
+    [Column("email")] 
     public string? Email { get; set; }
+
+
+}
+
+public class EmployeeDb: DbContext
+{
+    public EmployeeDb(DbContextOptions<EmployeeDb> options)
+        : base(options) { }
+
+    public DbSet<Employee> Employees { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Employee>(e => e.ToTable("employee"));
+        modelBuilder.Entity<Employee>(entity =>
+        {
+            entity.Property(e => e.Id)
+                .HasColumnName("id")
+                .HasDefaultValueSql("nextval('account.item_id_seq'::regclass)");
+            entity.Property(e => e.Name).IsRequired().HasColumnName("name");
+            entity.Property(e => e.Email).IsRequired().HasColumnName("email");
+        });
+
+        base.OnModelCreating(modelBuilder);
+    }   
 }
